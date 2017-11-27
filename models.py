@@ -19,7 +19,7 @@ class Net(nn.Module):
         
         return F.log_softmax(x)
 
-# self.layer1 = nn.Sequential()
+		# self.layer1 = nn.Sequential()
 class Net(nn.Module):
 	def __init__(self):
 		super(Net, self).__init__()
