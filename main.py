@@ -100,6 +100,7 @@ def test():
 for epoch in range(1, args.epochs + 1):
     train(epoch)
     perf = test()
+    args.lr = (0.95**epoch) * 0.001
     torch.save(
         {'net': model,
          'test': perf},
