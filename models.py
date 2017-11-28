@@ -23,24 +23,24 @@ class Net(nn.Module):
 class Net(nn.Module):
 	def __init__(self):
 		super(Net, self).__init__()
-		self.conv1 = nn.Conv2d(1, 20, 5, 1)
-		self.bn1 = nn.BatchNorm2d(20, eps=1e-05, momentum=0.1, affine=True)
-		self.conv2 = nn.Conv2d(20, 50, 5, 1)
-		self.bn2 = nn.BatchNorm2d(50, eps=1e-05, momentum=0.1, affine=True)
+		self.layer1 = nn.Sequential(
+            nn.Conv2d(1, 20, 5),
+            nn.BatchNorm2d(20),
+            nn.MaxPool2d(2),
+            nn.ReLU())
+		self.layer2 = nn.Sequential(
+			nn.Conv2d(20, 50, 5),
+			nn.BatchNorm2d(50),
+			nn.MaxPool2d(2),
+			nn.ReLU())
 		self.fc1 = nn.Linear(4*4*50, 500)
 		self.fc2 = nn.Linear(500, 27)
 		self.ceriation = nn.CrossEntropyLoss()
 	    
 	def forward(self, x):
-	    x = self.conv1(x)
-	    x = F.max_pool2d(x, 2, 2)
-	    x = self.bn1(x)
-	    x = F.relu(x)
-	    x = self.conv2(x)
-	    x = self.bn2(x)
-	    x = F.max_pool2d(x, 2, 2)
-	    x = F.relu(x)
-	    x = x.view(-1, 4*4*50)
-	    x = self.fc1(x)
-	    x = self.fc2(x)
-	    return x
+		x = self.layer1(x)
+		x = self.layer2(x)
+		x = x.view(-1, 4*4*50)
+		x = self.fc1(x)
+		x = self.fc2(x)
+		return x
