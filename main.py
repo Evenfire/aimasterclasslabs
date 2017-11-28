@@ -27,24 +27,28 @@ parser.add_argument('--seed', type=int, default=1, metavar='S',
                     help='random seed (default: 1)')
 parser.add_argument('--log-interval', type=int, default=10, metavar='N',
                     help='how many batches to wait before logging training status')
+parser.add_argument('--data-path', type=str, default='data', metavar='DPATH',
+                    help='dataset path (e.g. use to load dataset on Floydhub)')
+#save model interval
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
+print("Cuda on: {}".format(args.cuda))
 
 torch.manual_seed(args.seed)
 if args.cuda:
     torch.cuda.manual_seed(args.seed)
 
-
+PIL_imgs = []
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 train_loader = torch.utils.data.DataLoader(
-    datasets.EMNIST('data', 'letters', train=True, download=True,
+    datasets.EMNIST(args.data_path, 'letters', train=True, download=True,
                     transform=transforms.Compose([
                         transforms.ToTensor(),
                         transforms.Normalize((0.1722,), (0.3309,))
                     ])),
     batch_size=args.batch_size, shuffle=True, **kwargs)
 test_loader = torch.utils.data.DataLoader(
-    datasets.EMNIST('data', 'letters', train=False, transform=transforms.Compose([
+    datasets.EMNIST(args.data_path, 'letters', train=False, transform=transforms.Compose([
                         transforms.ToTensor(),
                         transforms.Normalize((0.1722,), (0.3309,))
                     ])),
@@ -53,7 +57,9 @@ test_loader = torch.utils.data.DataLoader(
 
 model = models.Net()
 if args.cuda:
+    print("Loading model on GPU")
     model.cuda()
+    print("Done")
 
 # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
 optimizer = optim.Adam(model.parameters(), lr=0.001)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
