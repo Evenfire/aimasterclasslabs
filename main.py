@@ -62,11 +62,11 @@ if args.cuda:
     print("Done")
 
 # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
-optimizer = optim.Adam(model.parameters(), lr=0.001)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
+# optimizer = optim.Adam(model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
 
 
 # def train(epoch, optimizer):
-def train(epoch):
+def train(epoch, optimizer):
     model.train()
     for batch_idx, (data, target) in enumerate(train_loader):
         if args.cuda:
@@ -107,12 +107,12 @@ def test():
 new_lr = 0.001
 for epoch in range(1, args.epochs + 1):
     ############
-    # optimizer = optim.Adam(model.parameters(), new_lr)
+    optimizer = optim.Adam(model.parameters(), lr=new_lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
     ############
-    train(epoch)
+    train(epoch, optimizer)
     perf = test()
     ############
-    # new_lr = (0.95**epoch) * 0.001
+    new_lr = (0.95**epoch) * 0.001
     ############
     torch.save(
         {'net': model,

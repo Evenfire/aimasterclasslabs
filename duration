@@ -1,0 +1,1 @@
+let i=10; floyd status | cut -c70-80 | tail -12 | sed 's/ //g' | while read test; do echo "$test-\c"; let i=i+test; echo $i; done; echo "scale=3; $i / 60" | bc
