@@ -68,43 +68,57 @@ class EMNIST(MNIST):
             else:
                 raise
 
-        print('Downloading ' + self.url)
-        data = urllib.request.urlopen(self.url)
+        # print('Downloading ' + self.url)
+        # data = urllib.request.urlopen(self.url)
         filename = self.url.rpartition('/')[2]
         raw_folder = os.path.join(self.root, self.raw_folder)
         file_path = os.path.join(raw_folder, filename)
-        with open(file_path, 'wb') as f:
-            f.write(data.read())
+        # with open(file_path, 'wb') as f:
+            # f.write(data.read())
 
-        print('Extracting zip archive')
-        with zipfile.ZipFile(file_path) as zip_f:
-            zip_f.extractall(raw_folder)
-        os.unlink(file_path)
-        gzip_folder = os.path.join(raw_folder, 'gzip')
-        for gzip_file in os.listdir(gzip_folder):
-            if gzip_file.endswith('.gz'):
-                print('Extracting ' + gzip_file)
-                with open(os.path.join(raw_folder, gzip_file.replace('.gz', '')), 'wb') as out_f, \
-                        gzip.GzipFile(os.path.join(gzip_folder, gzip_file)) as zip_f:
-                    out_f.write(zip_f.read())
-        shutil.rmtree(gzip_folder)
+        # print('Extracting zip archive')
+        # with zipfile.ZipFile(file_path) as zip_f:
+        #     zip_f.extractall(raw_folder)
+        # # os.unlink(file_path)
+        # gzip_folder = os.path.join(raw_folder, 'gzip')
+        # for gzip_file in os.listdir(gzip_folder):
+        #     if gzip_file.endswith('.gz'):
+        #         print('Extracting ' + gzip_file)
+        #         with open(os.path.join(raw_folder, gzip_file.replace('.gz', '')), 'wb') as out_f, \
+        #                 gzip.GzipFile(os.path.join(gzip_folder, gzip_file)) as zip_f:
+        #             out_f.write(zip_f.read())
+        # shutil.rmtree(gzip_folder)
 
         # process and save as torch files
-        for split in self.splits:
-            print('Processing ' + split)
-            training_set = (
-                read_image_file(os.path.join(raw_folder, 'emnist-{}-train-images-idx3-ubyte'.format(split))),
-                read_label_file(os.path.join(raw_folder, 'emnist-{}-train-labels-idx1-ubyte'.format(split)))
-            )
-            test_set = (
-                read_image_file(os.path.join(raw_folder, 'emnist-{}-test-images-idx3-ubyte'.format(split))),
-                read_label_file(os.path.join(raw_folder, 'emnist-{}-test-labels-idx1-ubyte'.format(split)))
-            )
-            with open(os.path.join(self.root, self.processed_folder, self._training_file(split)), 'wb') as f:
-                torch.save(training_set, f)
-            with open(os.path.join(self.root, self.processed_folder, self._test_file(split)), 'wb') as f:
-                torch.save(test_set, f)
-
+        # for split in self.splits:
+        #     print('Processing ' + split)
+        #     training_set = (
+        #         read_image_file(os.path.join(raw_folder, 'emnist-{}-train-images-idx3-ubyte'.format(split))),
+        #         read_label_file(os.path.join(raw_folder, 'emnist-{}-train-labels-idx1-ubyte'.format(split)))
+        #     )
+        #     test_set = (
+        #         read_image_file(os.path.join(raw_folder, 'emnist-{}-test-images-idx3-ubyte'.format(split))),
+        #         read_label_file(os.path.join(raw_folder, 'emnist-{}-test-labels-idx1-ubyte'.format(split)))
+        #     )
+        #     with open(os.path.join(self.root, self.processed_folder, self._training_file(split)), 'wb') as f:
+        #         torch.save(training_set, f)
+        #     with open(os.path.join(self.root, self.processed_folder, self._test_file(split)), 'wb') as f:
+        #         torch.save(test_set, f)
+        split = self.split
+        print('Processing ' + split)
+        train_img = read_image_file(os.path.join(raw_folder, 'emnist-{}-train-images-idx3-ubyte'.format(split)))
+        train_lab = read_label_file(os.path.join(raw_folder, 'emnist-{}-train-labels-idx1-ubyte'.format(split)))
+        print(train_img.size())
+        print(train_lab.size())
+        training_set = (train_img, train_lab)
+        test_set = (
+            read_image_file(os.path.join(raw_folder, 'emnist-{}-test-images-idx3-ubyte'.format(split))),
+            read_label_file(os.path.join(raw_folder, 'emnist-{}-test-labels-idx1-ubyte'.format(split)))
+        )
+        with open(os.path.join(self.root, self.processed_folder, self._training_file(split)), 'wb') as f:
+            torch.save(training_set, f)
+        with open(os.path.join(self.root, self.processed_folder, self._test_file(split)), 'wb') as f:
+            torch.save(test_set, f)
         print('Done!')
 
 
@@ -152,4 +166,6 @@ def read_image_file(path):
         num_cols = get_int(data[12:16])
         images = []
         parsed = np.frombuffer(data, dtype=np.uint8, offset=16)
+        print(len(parsed))
+        print(torch.from_numpy(parsed).size())
         return torch.from_numpy(parsed).view(length, num_rows, num_cols)
