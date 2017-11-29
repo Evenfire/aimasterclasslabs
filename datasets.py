@@ -108,8 +108,9 @@ class EMNIST(MNIST):
         print('Processing ' + split)
         train_img = read_image_file(os.path.join(raw_folder, 'emnist-{}-train-images-idx3-ubyte'.format(split)))
         train_lab = read_label_file(os.path.join(raw_folder, 'emnist-{}-train-labels-idx1-ubyte'.format(split)))
-        print(train_img.size())
-        print(train_lab.size())
+        # print(train_img.size())
+        # print(train_img[0])
+        # print(train_lab.size())
         training_set = (train_img, train_lab)
         test_set = (
             read_image_file(os.path.join(raw_folder, 'emnist-{}-test-images-idx3-ubyte'.format(split))),
@@ -166,6 +167,6 @@ def read_image_file(path):
         num_cols = get_int(data[12:16])
         images = []
         parsed = np.frombuffer(data, dtype=np.uint8, offset=16)
-        print(len(parsed))
-        print(torch.from_numpy(parsed).size())
+        # print(len(parsed))
+        # print(torch.from_numpy(parsed).size())
         return torch.from_numpy(parsed).view(length, num_rows, num_cols)
