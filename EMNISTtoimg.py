@@ -49,54 +49,39 @@ def main():
 
 	#### LOAD DATA ####
 	set_loader = load_set(args)
+	print("set_loader {}".format(len(set_loader)))
 
 	#### HANDLE ARGS ####
 	if args.start + args.size > len(set_loader):
-		exit("BAD SIZE")
+		args.size = len(set_loader) - args.start
+		# exit("BAD SIZE set_loader {}".format(len(set_loader)))
 
-	tensors_lst = []
-	labels_lst = []
+	tens_labels = []
 	for i in range(args.start, args.start + args.size):
 		img = set_loader[i][0]
 		if args.rectify:
 			img = img.transpose(PIL.Image.FLIP_TOP_BOTTOM).rotate(-90)
 		if not args.no_mod:
-			img = img.resize((24, 24), PIL.Image.BILINEAR)
-			# img = img.rotate(-5, PIL.Image.BILINEAR)
-			container = Image.new('L', (28, 28))
-			# container.paste(img, (0, 4, 24, 28))
-			container.paste(img)
-			img = container
-			toto = np.array(img)
-
-			shift = lambda x: 3 * x / 7
-			# shift = lambda x: -1 * x / 10
-
-			for k in range(toto.shape[0]):
-				toto[:,k] = np.roll(toto[:,k], int(shift(k)))
-			if args.array:
-				for t in range(toto.shape[0]):
-					for tt in range(toto.shape[1]):
-						print("{:3}".format(toto[t][tt])),
-					print("")
-			img = Image.fromarray(toto, 'L')
-			# img = img.resize((26, 26), PIL.Image.BILINEAR)
-			# img = img.resize((28, 28), PIL.Image.BILINEAR)
-			img = img.resize((26, 26), PIL.Image.LANCZOS)#.BILINEAR
-			img = img.resize((28, 28), PIL.Image.LANCZOS)#.BILINEAR
+			# img = img.resize((25, 25), PIL.Image.BILINEAR)
+			# img = img.rotate(-10, PIL.Image.BILINEAR)
 			# container = Image.new('L', (28, 28))
+			# # container.paste(img, (0, 4, 24, 28))
 			# container.paste(img)
 			# img = container
-			# tlst, llst = gen_smaller_translate(img, 20, set_loader[i][1], i, args)
-			# tensors_lst = tensors_lst + tlst
-			# labels_lst = labels_lst + llst
+			# toto = np.array(img)
+
+			tens_labels.extend(gen_smaller_translate(img, 20, set_loader[i][1], i, args))
+			tens_labels.extend(gen_smaller_rotate(img, set_loader[i][1], i, args, 15))
+			tens_labels.extend(gen_smaller_rotate(img, set_loader[i][1], i, args, -15))
+			tens_labels.extend(gen_inclination(img, set_loader[i][1], i, args, 'anti'))
+			tens_labels.extend(gen_inclination(img, set_loader[i][1], i, args, 'trigo'))
 
 		if args.visu:
-			save_img(img, args, i, set_loader[i][1], "_")
+			save_img(img, args, i, set_loader[i][1], "")
+		tens_labels.extend([(img_to_tensor(img), label_to_tensor(set_loader[i][1]))])
 
-		labels_lst.append(label_to_tensor(set_loader[i][1]))
-		tensors_lst.append(img_to_tensor(img))
-
+	tensors_lst = [tens for tens, lab in tens_labels]
+	labels_lst = [lab for tens, lab in tens_labels]
 	tensors = torch.cat(tensors_lst)
 	labels = torch.cat(labels_lst)
 	print("tensors: "),
@@ -110,57 +95,66 @@ def main():
 	print("Save - IMG")
 	set_loader = load_set(args)
 	for i in range(args.start, args.start + len(labels_lst)):
-		save_img(set_loader[i][0], args, i, set_loader[i][1], "_")
+		save_img(set_loader[i][0], args, i, set_loader[i][1], "")
 
 def gen_inclination(img, label, index, args, direction='anti'):
-	tensors_lst = []
-	labels_lst = []
-	
+	tup_ten_lab_lst = []
+
 	img = img.resize((24, 24), PIL.Image.BILINEAR)
+	container = Image.new('L', (28, 28))
 	if direction == 'anti':
-		container = Image.new('L', (28, 28))
+		container.paste(img)
 		shift = lambda x: 3 * x / 7
 	else:
-		container.paste(img, (0, 4, 24, 28))
+		container.paste(img, (0, 4, 24, 28))#check
 		shift = lambda x: -1 * x / 10
-	container.paste(img)
 	img = container
 	img_array = np.array(img)
 	for k in range(img_array.shape[0]):
-		img_array[:,k] = np.roll(img_array[:,k], int(shift(k)))		
+		if args.rectify:
+			img_array[k,:] = np.roll(img_array[k,:], int(shift(k)))
+		else:
+			img_array[:,k] = np.roll(img_array[:,k], int(shift(k)))
 	img = Image.fromarray(img_array, 'L')
 	img = img.resize((26, 26), PIL.Image.LANCZOS)#.BILINEAR
 	img = img.resize((28, 28), PIL.Image.LANCZOS)#.BILINEAR
+	tup_ten_lab_lst.append((img_to_tensor(img), label_to_tensor(label)))
 	if args.array:
 		display_img_array(img_array)
+	if args.visu:
+				save_img(img, args, index, label, "incl_{}".format(direction))
+	return tup_ten_lab_lst
 
-	return tensors_lst, labels_lst
 
+def gen_smaller_rotate(img, label, index, args, angle):
+	tup_ten_lab_lst = []
 
-def gen_smaller_rotate(img, new_size, label, index, args):#+translate
-	tensors_lst = []
-	labels_lst = []
-
-	return tensors_lst, labels_lst
+	new_img = img.resize((25, 25), PIL.Image.BILINEAR)
+	new_img = new_img.rotate(angle, PIL.Image.BILINEAR)
+	container = Image.new('L', (28, 28))
+	container.paste(new_img)
+	tup_ten_lab_lst.append((img_to_tensor(container), label_to_tensor(label)))
+	if args.visu:
+			save_img(new_img, args, index, label, "rot_{}".format(angle))
+	return tup_ten_lab_lst
 
 
 def gen_smaller_translate(img, new_size, label, index, args):
-	tensors_lst = []
-	labels_lst = []
+	tup_ten_lab_lst = []
 
-	for x in range(3):
-		for y in range(3):
-			_x = x * 4
-			_y = y * 4
+	# nb = 2
+	for x in range(2):
+		for y in range(2):
+			_x = x * 4 + 2
+			_y = y * 4 + 2
 			new_img = img.resize((new_size, new_size), PIL.Image.BILINEAR)
 			container = Image.new('L', (28, 28))
 			container.paste(new_img, (_x, _y, new_size + _x, new_size + _y))
 			new_img = container
-			labels_lst.append(label_to_tensor(label))
-			tensors_lst.append(img_to_tensor(new_img))
+			tup_ten_lab_lst.append((img_to_tensor(new_img), label_to_tensor(label)))
 			if args.visu:
-				save_img(new_img, args, index, label, "{}{}{}".format(_x, _y, index))
-	return tensors_lst, labels_lst
+				save_img(new_img, args, index, label, "trans_{}_{}_{}".format(_x, _y, index))
+	return tup_ten_lab_lst
 
 def label_to_tensor(label):
 	parsed = np.full((1, 1), label, dtype=np.uint8)
@@ -194,13 +188,13 @@ def save_pt(tensors, labels, args):
 	if args.no_pt:
 		print("No save - PT")
 		return
-	print("Save - PT")
 	if args.set == 'train':
 		root = 'data'
 		file_name = 'training_letters.pt'
 	else:
 		root = 'agirecole'
 		file_name = 'data-val.pt'
+	print("Save - PT to {}".format(os.path.join(root, 'processed', file_name)))
 	with open(os.path.join(root, 'processed', file_name), 'wb') as f:
 		torch.save((tensors, labels), f)
 
@@ -210,11 +204,12 @@ def save_img(img, args, index, label, supp):
 	else:
 		img.save("{}_{}_{}_{}.png".format(index, label, args.set, supp), "PNG")
 
-def display_img_array(array)
+def display_img_array(array):
 	for t in range(array.shape[0]):
 		for tt in range(array.shape[1]):
 			print("{:3}".format(array[t][tt])),
 		print("")
+	print("")
 
 if __name__=="__main__":
 	main()
