@@ -9,6 +9,7 @@ import os
 import os.path
 import numpy as np
 from sys import exit
+# import matplotlib.pyplot as plt
 
 def main():
 	parser = argparse.ArgumentParser()
@@ -32,6 +33,16 @@ def main():
 						help='no image modification')
 	parser.add_argument('--visu', type=int, default=0,
 						help='no image modification')
+	# parser.add_argument('--no-pt', action='store_true', default=False,
+	# 					help='no save pt')
+	# parser.add_argument('--no-img', action='store_true', default=False,
+	# 					help='no save img')
+	# parser.add_argument('--rectify', action='store_true', default=False,
+	# 					help='rectify images to appear as normal letters')
+	# parser.add_argument('--no-mod', action='store_true', default=False,
+	# 					help='no image modification')
+	# parser.add_argument('--visu', action='store_true', default=False,
+	# 					help='no image modification')
 	args = parser.parse_args()
 
 	#### LOAD DATA ####
@@ -48,9 +59,31 @@ def main():
 		if args.rectify:
 			img = img.transpose(PIL.Image.FLIP_TOP_BOTTOM).rotate(-90)
 		if not args.no_mod:
-			tlst, llst = gen_smaller_translate(img, 20, set_loader[i][1], i, args)
-			tensors_lst = tensors_lst + tlst
-			labels_lst = labels_lst + llst
+			img = img.resize((25, 25), PIL.Image.BILINEAR)
+			# img = img.rotate(-5, PIL.Image.BILINEAR)
+			container = Image.new('L', (28, 28))
+			container.paste(img)
+			img = container
+			toto = np.array(img)
+
+			A = toto.shape[0] / 3.0
+			w = 2.0 / toto.shape[1]
+
+			# shift = lambda x: A * np.sin(2.0*np.pi*x * w)
+			# shift = lambda x: A * np.sin(np.pi*x*(w*0.1))
+			shift = lambda x: 3 * x / 7
+
+			for k in range(toto.shape[0]):
+				toto[:,k] = np.roll(toto[:,k], int(shift(k)))
+			for t in range(toto.shape[0]):
+				for tt in range(toto.shape[1]):
+					print("{:3}".format(toto[t][tt])),
+				print("")
+			img = Image.fromarray(toto)#, PIL.Image.BILINEAR)
+			# img = img.resize((27, 27), PIL.Image.BILINEAR)
+			# tlst, llst = gen_smaller_translate(img, 20, set_loader[i][1], i, args)
+			# tensors_lst = tensors_lst + tlst
+			# labels_lst = labels_lst + llst
 
 		if args.visu:
 			save_img(img, args, i, set_loader[i][1], "_")
@@ -70,8 +103,16 @@ def main():
 		exit("No Save - IMG")
 	print("Save - IMG")
 	set_loader = load_set(args)
-	for i in range(args.start, args.start + args.size):
+	for i in range(args.start, args.start + len(labels_lst)):
 		save_img(set_loader[i][0], args, i, set_loader[i][1], "_")
+
+
+def gen_smaller_rotate(img, new_size, label, index, args):#+translate
+	tensors_lst = []
+	labels_lst = []
+
+	return tensors_lst, labels_lst
+
 
 def gen_smaller_translate(img, new_size, label, index, args):
 	tensors_lst = []
@@ -124,7 +165,13 @@ def save_pt(tensors, labels, args):
 		print("No save - PT")
 		return
 	print("Save - PT")
-	with open(os.path.join('data', 'processed', 'training_letters.pt'), 'wb') as f:
+	if args.set == 'train':
+		root = 'data'
+		file_name = 'training_letters.pt'
+	else:
+		root = 'agirecole'
+		file_name = 'data-val.pt'
+	with open(os.path.join(root, 'processed', file_name), 'wb') as f:
 		torch.save((tensors, labels), f)
 
 def save_img(img, args, index, label, supp):

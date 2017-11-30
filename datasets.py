@@ -74,7 +74,7 @@ class EMNIST(MNIST):
         raw_folder = os.path.join(self.root, self.raw_folder)
         file_path = os.path.join(raw_folder, filename)
         # with open(file_path, 'wb') as f:
-            # f.write(data.read())
+        #     f.write(data.read())
 
         # print('Extracting zip archive')
         # with zipfile.ZipFile(file_path) as zip_f:
