@@ -33,6 +33,8 @@ def main():
 						help='no image modification')
 	parser.add_argument('--visu', type=int, default=0,
 						help='no image modification')
+	parser.add_argument('--array', type=int, default=0,
+						help='see img array')
 	# parser.add_argument('--no-pt', action='store_true', default=False,
 	# 					help='no save pt')
 	# parser.add_argument('--no-img', action='store_true', default=False,
@@ -59,28 +61,32 @@ def main():
 		if args.rectify:
 			img = img.transpose(PIL.Image.FLIP_TOP_BOTTOM).rotate(-90)
 		if not args.no_mod:
-			img = img.resize((25, 25), PIL.Image.BILINEAR)
+			img = img.resize((24, 24), PIL.Image.BILINEAR)
 			# img = img.rotate(-5, PIL.Image.BILINEAR)
 			container = Image.new('L', (28, 28))
+			# container.paste(img, (0, 4, 24, 28))
 			container.paste(img)
 			img = container
 			toto = np.array(img)
 
-			A = toto.shape[0] / 3.0
-			w = 2.0 / toto.shape[1]
-
-			# shift = lambda x: A * np.sin(2.0*np.pi*x * w)
-			# shift = lambda x: A * np.sin(np.pi*x*(w*0.1))
 			shift = lambda x: 3 * x / 7
+			# shift = lambda x: -1 * x / 10
 
 			for k in range(toto.shape[0]):
 				toto[:,k] = np.roll(toto[:,k], int(shift(k)))
-			for t in range(toto.shape[0]):
-				for tt in range(toto.shape[1]):
-					print("{:3}".format(toto[t][tt])),
-				print("")
-			img = Image.fromarray(toto)#, PIL.Image.BILINEAR)
-			# img = img.resize((27, 27), PIL.Image.BILINEAR)
+			if args.array:
+				for t in range(toto.shape[0]):
+					for tt in range(toto.shape[1]):
+						print("{:3}".format(toto[t][tt])),
+					print("")
+			img = Image.fromarray(toto, 'L')
+			# img = img.resize((26, 26), PIL.Image.BILINEAR)
+			# img = img.resize((28, 28), PIL.Image.BILINEAR)
+			img = img.resize((26, 26), PIL.Image.LANCZOS)#.BILINEAR
+			img = img.resize((28, 28), PIL.Image.LANCZOS)#.BILINEAR
+			# container = Image.new('L', (28, 28))
+			# container.paste(img)
+			# img = container
 			# tlst, llst = gen_smaller_translate(img, 20, set_loader[i][1], i, args)
 			# tensors_lst = tensors_lst + tlst
 			# labels_lst = labels_lst + llst
@@ -105,6 +111,30 @@ def main():
 	set_loader = load_set(args)
 	for i in range(args.start, args.start + len(labels_lst)):
 		save_img(set_loader[i][0], args, i, set_loader[i][1], "_")
+
+def gen_inclination(img, label, index, args, direction='anti'):
+	tensors_lst = []
+	labels_lst = []
+	
+	img = img.resize((24, 24), PIL.Image.BILINEAR)
+	if direction == 'anti':
+		container = Image.new('L', (28, 28))
+		shift = lambda x: 3 * x / 7
+	else:
+		container.paste(img, (0, 4, 24, 28))
+		shift = lambda x: -1 * x / 10
+	container.paste(img)
+	img = container
+	img_array = np.array(img)
+	for k in range(img_array.shape[0]):
+		img_array[:,k] = np.roll(img_array[:,k], int(shift(k)))		
+	img = Image.fromarray(img_array, 'L')
+	img = img.resize((26, 26), PIL.Image.LANCZOS)#.BILINEAR
+	img = img.resize((28, 28), PIL.Image.LANCZOS)#.BILINEAR
+	if args.array:
+		display_img_array(img_array)
+
+	return tensors_lst, labels_lst
 
 
 def gen_smaller_rotate(img, new_size, label, index, args):#+translate
@@ -179,6 +209,12 @@ def save_img(img, args, index, label, supp):
 		img.save("{}_{}_{}_{}.png".format(index, str(unichr(label + 96)), args.set, supp),"PNG")
 	else:
 		img.save("{}_{}_{}_{}.png".format(index, label, args.set, supp), "PNG")
+
+def display_img_array(array)
+	for t in range(array.shape[0]):
+		for tt in range(array.shape[1]):
+			print("{:3}".format(array[t][tt])),
+		print("")
 
 if __name__=="__main__":
 	main()
