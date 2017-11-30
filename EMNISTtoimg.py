@@ -56,8 +56,14 @@ def main():
 		args.size = len(set_loader) - args.start
 		# exit("BAD SIZE set_loader {}".format(len(set_loader)))
 
+
+	### origin 170 clean 157 ### new 1468
+	remove_from_agirecole = [135, 118, 13, 146, 154, 162, 166, 25, 54, 6, 80, 88, 9]
+
 	tens_labels = []
 	for i in range(args.start, args.start + args.size):
+		# if i in remove_from_agirecole:
+		# 	continue
 		img = set_loader[i][0]
 		if args.rectify:
 			img = img.transpose(PIL.Image.FLIP_TOP_BOTTOM).rotate(-90)
@@ -69,12 +75,12 @@ def main():
 			# container.paste(img)
 			# img = container
 			# toto = np.array(img)
-
 			tens_labels.extend(gen_smaller_translate(img, 20, set_loader[i][1], i, args))
 			tens_labels.extend(gen_smaller_rotate(img, set_loader[i][1], i, args, 15))
 			tens_labels.extend(gen_smaller_rotate(img, set_loader[i][1], i, args, -15))
 			tens_labels.extend(gen_inclination(img, set_loader[i][1], i, args, 'anti'))
 			tens_labels.extend(gen_inclination(img, set_loader[i][1], i, args, 'trigo'))
+			tens_labels.extend(gen_zoom_out(img, 17, set_loader[i][1], i, args))
 
 		if args.visu:
 			save_img(img, args, i, set_loader[i][1], "")
@@ -97,6 +103,8 @@ def main():
 	for i in range(args.start, args.start + len(labels_lst)):
 		save_img(set_loader[i][0], args, i, set_loader[i][1], "")
 
+# tmp = np.array(img_array[:,k])
+# img_array[:,k] = np.roll(img_array[:,k], int(shift(k)))
 def gen_inclination(img, label, index, args, direction='anti'):
 	tup_ten_lab_lst = []
 
@@ -112,9 +120,11 @@ def gen_inclination(img, label, index, args, direction='anti'):
 	img_array = np.array(img)
 	for k in range(img_array.shape[0]):
 		if args.rectify:
-			img_array[k,:] = np.roll(img_array[k,:], int(shift(k)))
+			img_array[k,:], error = ft_roll(img_array[k,:], int(shift(k)))
 		else:
-			img_array[:,k] = np.roll(img_array[:,k], int(shift(k)))
+			img_array[:,k], error = ft_roll(img_array[:,k], int(shift(k)))
+		if error:
+			return []
 	img = Image.fromarray(img_array, 'L')
 	img = img.resize((26, 26), PIL.Image.LANCZOS)#.BILINEAR
 	img = img.resize((28, 28), PIL.Image.LANCZOS)#.BILINEAR
@@ -126,6 +136,31 @@ def gen_inclination(img, label, index, args, direction='anti'):
 	return tup_ten_lab_lst
 
 
+def ft_roll(a, shift):#check on rectify
+	sum_a = np.sum(a)
+	if shift == 0:
+		out = np.array(a)
+	elif shift < 0:
+		out = np.pad(a, ((0, abs(shift))), mode='constant')[abs(shift):]
+	else:
+		out = np.pad(a, ((shift,0)), mode='constant')[:-shift]
+	sum_o = np.sum(out)
+	if sum_o == sum_a:
+		return out, False
+	return out, True
+
+def gen_zoom_out(img, new_size, label, index, args):
+	tup_ten_lab_lst = []
+
+	offset = 5
+	img = img.resize((new_size, new_size), PIL.Image.BILINEAR)
+	container = Image.new('L', (28, 28))
+	container.paste(img, (offset, offset, new_size + offset, new_size + offset))
+	tup_ten_lab_lst.append((img_to_tensor(container), label_to_tensor(label)))
+	if args.visu:
+			save_img(container, args, index, label, "out_")
+	return tup_ten_lab_lst
+
 def gen_smaller_rotate(img, label, index, args, angle):
 	tup_ten_lab_lst = []
 
@@ -135,7 +170,7 @@ def gen_smaller_rotate(img, label, index, args, angle):
 	container.paste(new_img)
 	tup_ten_lab_lst.append((img_to_tensor(container), label_to_tensor(label)))
 	if args.visu:
-			save_img(new_img, args, index, label, "rot_{}".format(angle))
+			save_img(container, args, index, label, "rot_{}".format(angle))
 	return tup_ten_lab_lst
 
 
