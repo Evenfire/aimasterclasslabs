@@ -50,8 +50,12 @@ class Net(nn.Module):
 class Net(nn.Module):
 	def __init__(self):
 		super(Net, self).__init__()
+		self.sa = True
+		self.l3d = 0.3
+		self.l31d = 0.3
 		self.layer1 = nn.Sequential(
 			nn.Conv2d(1, 32, kernel_size=(5, 5), stride=1, padding=2),
+			# nn.BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True)
 			nn.ReLU(),
 			nn.MaxPool2d((2,2), stride=2, padding=0)
 			)
@@ -60,18 +64,36 @@ class Net(nn.Module):
 			nn.ReLU(),
 			nn.MaxPool2d((2,2), stride=2, padding=0)
 			)
-		self.fc1 = nn.Linear(7*7*64, 1024)
-		#activation?
+
+		self.layer3 = nn.Sequential(
+			nn.Linear(7*7*64, 1024),
+			nn.ReLU(),
+			nn.Dropout(p=self.l3d)
+			)
+		self.layer3_1 = nn.Sequential(
+			nn.Linear(1024, 512),
+			nn.ReLU(),
+			nn.Dropout(p=self.l31d)
+			)
 		#one more ?
-		self.fc2 = nn.Linear(1024, 27)
-		self.ceriation = nn.CrossEntropyLoss()
-		
+		self.layer4 = nn.Sequential(
+			nn.Linear(512, 27),#add input data for C: None?
+			# nn.ReLU()
+			)
+		self.ceriation = nn.CrossEntropyLoss(weight=None, size_average=self.sa)
+		#size_average ?
+		#use weight if set is unbalanced(agirecole?)
+		# nn.CrossEntropyLoss(weight=None, size_average=True)
+		# nn.Dropout2d(p=0.5)
+
+	def set_sa(self, size_average):
+		self.sa = size_average
+
 	def forward(self, x):
-	#nn.Dropout2d(p=0.5, inplace=False)
-	#F.dropout2d(input, p=0.5, training=False, inplace=False)
 		x = self.layer1(x)
 		x = self.layer2(x)
 		x = x.view(-1, 7*7*64)
-		x = self.fc1(x)
-		x = self.fc2(x)
+		x = self.layer3(x)
+		x = self.layer3_1(x)
+		x = self.layer4(x)
 		return x
