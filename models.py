@@ -61,10 +61,14 @@ class Net(nn.Module):
 			nn.MaxPool2d((2,2), stride=2, padding=0)
 			)
 		self.fc1 = nn.Linear(7*7*64, 1024)
+		#activation?
+		#one more ?
 		self.fc2 = nn.Linear(1024, 27)
 		self.ceriation = nn.CrossEntropyLoss()
 		
 	def forward(self, x):
+	#nn.Dropout2d(p=0.5, inplace=False)
+	#F.dropout2d(input, p=0.5, training=False, inplace=False)
 		x = self.layer1(x)
 		x = self.layer2(x)
 		x = x.view(-1, 7*7*64)
