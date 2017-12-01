@@ -1,4 +1,5 @@
 from __future__ import print_function
+import math
 import argparse
 import torch
 import torch.nn as nn
@@ -8,6 +9,8 @@ from torchvision import transforms
 from torch.autograd import Variable
 import models
 import datasets
+import matplotlib
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 # Training settings
@@ -64,14 +67,20 @@ if args.cuda:
 	print("Done")
 
 # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
-optimizer = optim.Adam(model.parameters(), lr=0.001)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
+# optimizer = optim.Adam(model.parameters(), lr=0.001)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
 
 # def train(epoch, optimizer):
 Losses = []
 Absc = []
-def train(epoch, optimizer):
+Lr = []
+Lr_absc = []
+def train(epoch):#, optimizer):
 	model.train()
+	i = 0
+	new_lr = 0.001
+	Lr.append(new_lr)
 	for batch_idx, (data, target) in enumerate(train_loader):
+		optimizer = optim.Adam(model.parameters(), lr=new_lr)
 		if args.cuda:
 			data, target = data.cuda(), target.cuda()
 		data, target = Variable(data), Variable(target)
@@ -81,6 +90,8 @@ def train(epoch, optimizer):
 		loss = model.ceriation(output, target)
 		loss.backward()
 		optimizer.step()
+		new_lr = 0.001 / math.sqrt(batch_idx + epoch)
+		Lr.append(new_lr)
 		if batch_idx % args.log_interval == 0:
 			perc = 100. * batch_idx / len(train_loader)
 			Losses.append(loss.data[0])
@@ -88,7 +99,9 @@ def train(epoch, optimizer):
 			print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
 				epoch, batch_idx * len(data), len(train_loader.dataset),
 				perc, loss.data[0]))
-		return
+			# i+=1
+			# if i == 1:
+			# 	return
 
 def test():
 	model.eval()
@@ -116,11 +129,12 @@ def test():
 new_lr = 0.001
 for epoch in range(1, args.epochs + 1):
 	############
-	# optimizer = optim.Adam(model.parameters(), lr=new_lr, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
+	# optimizer = optim.Adam(model.parameters(), lr=new_lr)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
 	############
-	train(epoch, optimizer)
+	train(epoch)#, optimizer)
 	perf = 0#test()
 	############
+	# new_lr = 1. / (1 + )
 	# new_lr = (0.95**epoch) * 0.001
 	############
 	torch.save(
@@ -128,10 +142,19 @@ for epoch in range(1, args.epochs + 1):
 		 'test': perf},
 		"model.pth"
 	)
-	break
+	# break
 
-print([l for l in Losses])
-print([a for a in Absc])
+# print([l for l in Losses])
+# print([a for a in Absc])
+# Absc = [a * 10 for a in Absc]
+plt.figure(1)
+plt.figure(figsize=(100, 5))
 plt.plot(Absc, Losses, 'ro')
 plt.axis([0, args.epochs + 1, 0, int(max(Losses) + 0.1 * max(Losses) + 1)])
-plt.savefig('toto.png', bbox_inches='tight')
+plt.savefig('./output/loss.png', bbox_inches='tight')
+
+plt.figure(2)
+plt.figure(figsize=(100, 5))
+plt.plot(Lr, 'bs')
+plt.savefig('./output/lr.png', bbox_inches='tight')
+

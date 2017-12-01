@@ -1,0 +1,4 @@
+5 -> normal, lr decay, 15
+6 -> +bigger, lr decay, 7
+7 -> bigger, lr decay, 7
+
