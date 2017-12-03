@@ -1,0 +1,11 @@
+automation
+- hyperparam:	dropouts threshold
+				BatchNornms momentum
+				AdamOptimizer betas + weight decay
+				Lr decay + Lr0 + decay_rate
+- archi			BatchNornm usage
+				layers size (+epochs)
+				+conv
+				+fc
+
+dropout: 0.3 0.4 0.5

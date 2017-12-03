@@ -48,7 +48,7 @@ class Net(nn.Module):
 		return x
 
 class Net(nn.Module):
-	def __init__(self):
+	def __init__(self, init_values=[.3, .3]):
 		super(Net, self).__init__()
 		self.sa = True
 		self.l3d = 0.3
@@ -66,12 +66,12 @@ class Net(nn.Module):
 			)
 
 		self.layer3 = nn.Sequential(
-			nn.Linear(7*7*64, 1024),
+			nn.Linear(7*7*64, 2048),
 			nn.ReLU(),
 			nn.Dropout(p=self.l3d)
 			)
 		self.layer3_1 = nn.Sequential(
-			nn.Linear(1024, 512),
+			nn.Linear(2048, 512),
 			nn.ReLU(),
 			nn.Dropout(p=self.l31d)
 			)

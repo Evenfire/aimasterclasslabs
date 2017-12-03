@@ -33,14 +33,15 @@ parser.add_argument('--log-interval', type=int, default=10, metavar='N',
 					help='how many batches to wait before logging training status')
 parser.add_argument('--data-path', type=str, default='data', metavar='DPATH',
 					help='dataset path (e.g. use to load dataset on Floydhub)')
-#save model interval
 args = parser.parse_args()
+
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 print("Cuda on: {}".format(args.cuda))
 
 torch.manual_seed(args.seed)
 if args.cuda:
 	torch.cuda.manual_seed(args.seed)
+
 
 PIL_imgs = []
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
@@ -58,7 +59,7 @@ test_loader = torch.utils.data.DataLoader(
 					])),
 	batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
-
+#load model
 model = models.Net()
 print(model)
 if args.cuda:
@@ -74,13 +75,13 @@ Losses = []
 Absc = []
 Lr = []
 Lr_absc = []
-def train(epoch):#, optimizer):
+def train(epoch, optimizer):
 	model.train()
 	i = 0
-	new_lr = 0.001
-	Lr.append(new_lr)
+	#new_lr = 0.001
+	#Lr.append(new_lr)
 	for batch_idx, (data, target) in enumerate(train_loader):
-		optimizer = optim.Adam(model.parameters(), lr=new_lr)
+		#optimizer = optim.Adam(model.parameters(), lr=new_lr)
 		if args.cuda:
 			data, target = data.cuda(), target.cuda()
 		data, target = Variable(data), Variable(target)
@@ -90,8 +91,8 @@ def train(epoch):#, optimizer):
 		loss = model.ceriation(output, target)
 		loss.backward()
 		optimizer.step()
-		new_lr = 0.001 / math.sqrt(batch_idx + epoch)
-		Lr.append(new_lr)
+		#new_lr = 0.001 / math.sqrt((batch_idx + 10*epoch)/10)
+		#Lr.append(new_lr)
 		if batch_idx % args.log_interval == 0:
 			perc = 100. * batch_idx / len(train_loader)
 			Losses.append(loss.data[0])
@@ -99,9 +100,9 @@ def train(epoch):#, optimizer):
 			print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
 				epoch, batch_idx * len(data), len(train_loader.dataset),
 				perc, loss.data[0]))
-			# i+=1
-			# if i == 1:
-			# 	return
+			#i+=1
+			#if i == 1:
+			#	return
 
 def test():
 	model.eval()
@@ -127,15 +128,16 @@ def test():
 
 
 new_lr = 0.001
+Lr.append(new_lr)
 for epoch in range(1, args.epochs + 1):
 	############
-	# optimizer = optim.Adam(model.parameters(), lr=new_lr)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
+	optimizer = optim.Adam(model.parameters(), lr=new_lr)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
 	############
-	train(epoch)#, optimizer)
-	perf = 0#test()
+	train(epoch, optimizer)
+	perf = test()
 	############
-	# new_lr = 1. / (1 + )
-	# new_lr = (0.95**epoch) * 0.001
+	new_lr = 0.001 / (1 + epoch)
+	Lr.append(new_lr)
 	############
 	torch.save(
 		{'net': model,
@@ -144,6 +146,12 @@ for epoch in range(1, args.epochs + 1):
 	)
 	# break
 
+def new_lr1(lr0, epoch, decay_rate):
+	return lr0 / (1 + decay_rate * (epoch - 1))
+	
+def new_lr2(lr0, epoch, decay_rate):
+	return (0.95**(epoch - 1)) * lr0
+
 # print([l for l in Losses])
 # print([a for a in Absc])
 # Absc = [a * 10 for a in Absc]
@@ -151,10 +159,10 @@ plt.figure(1)
 plt.figure(figsize=(100, 5))
 plt.plot(Absc, Losses, 'ro')
 plt.axis([0, args.epochs + 1, 0, int(max(Losses) + 0.1 * max(Losses) + 1)])
-plt.savefig('./output/loss.png', bbox_inches='tight')
+plt.savefig('/output/loss.png', bbox_inches='tight')
 
 plt.figure(2)
 plt.figure(figsize=(100, 5))
 plt.plot(Lr, 'bs')
-plt.savefig('./output/lr.png', bbox_inches='tight')
+plt.savefig('/output/lr.png', bbox_inches='tight')
 
