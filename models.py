@@ -64,9 +64,9 @@ class Net(nn.Module):
 			nn.ReLU(),
 			nn.MaxPool2d((2,2), stride=2, padding=0)
 			)
-
+		#+conv?
 		self.layer3 = nn.Sequential(
-			nn.Linear(7*7*64, 2048),
+			nn.Linear(7*7*64, 2048),#(7*7?)
 			nn.ReLU(),
 			nn.Dropout(p=self.l3d)
 			)

@@ -33,6 +33,8 @@ parser.add_argument('--log-interval', type=int, default=10, metavar='N',
 					help='how many batches to wait before logging training status')
 parser.add_argument('--data-path', type=str, default='data', metavar='DPATH',
 					help='dataset path (e.g. use to load dataset on Floydhub)')
+parser.add_argument('--server', action='store_true', default=False,
+					help='specify if program is on Floydhub')
 args = parser.parse_args()
 
 args.cuda = not args.no_cuda and torch.cuda.is_available()

@@ -8,14 +8,17 @@ class Saver():
 		self.hypers = hypers
 		self.losses = []
 		self.lr = []
+		self.acc = []
 		self.server = server
-		#model
 
 	def append_lr(self, lr, timing):
 		self.lr.append((lr, timing))
 
 	def append_losses(self, loss, timing):
 		self.losses.append((loss, timing))
+
+	def append_acc(self, acc, timing):
+		self.acc.append((acc, timing))
 
 	def gen_filename(self):
 		date = time.strftime("%d-%m-%Y_%H:%M:%S_%Z")
@@ -29,6 +32,7 @@ class Saver():
 		dic['hypers'] = self.hypers
 		dic['losses'] = self.losses
 		dic['lr'] = self.lr
+		dic['acc'] = self.acc
 		return dic
 
 	def export(self):
@@ -38,16 +42,20 @@ class Saver():
 		with open(filename, 'w') as f:
 			json.dump(data, f)
 
+	# def export_model(self, model):
 
 if __name__ == '__main__':
-	toto = Saver("gomt", 01, ['a', 'b', 'c'])
+	foo = Saver("bar", 01, ['a', 'b', 'c'])
 	for i in range(29):
-		toto.append_losses(i/100, i)
-	print(toto.gen_filename())
-	toto.export()
+		foo.append_losses(i/100, i)
+	print(foo.gen_filename())
+	foo.export()
 
-	with open(toto.gen_filename()) as json_data:
+	with open(foo.gen_filename()) as json_data:
 	    d = json.load(json_data)
 	    print(type(d))
 	    print(d)
 	    print(type(d['losses'][0][0]))
+
+
+#class hp picker
