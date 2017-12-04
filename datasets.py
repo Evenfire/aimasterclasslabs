@@ -126,7 +126,7 @@ class EMNIST(MNIST):
 class AgirEcole(MNIST):
     """    Agir pour l'ecole dataset
     """
-    splits = ("val", "test")
+    splits = ("val", "test", "train", "dev", "val_new", "val_clean")
 
     def __init__(self, root, split, **kwargs):
         if split not in self.splits:

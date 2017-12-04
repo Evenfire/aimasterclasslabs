@@ -1,4 +1,5 @@
 from __future__ import print_function
+from sys import exit
 import math
 import argparse
 import torch
@@ -62,8 +63,14 @@ test_loader = torch.utils.data.DataLoader(
 	batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
 #load model
-model = models.Net()
+# model = models.Net()
+# model = torch.load("model_36.pth", map_location=lambda storage, loc: storage)
+model = torch.load("checkpoint.pth")
+# print(param.requires_grad for param in model.parameters())
+# print(model.modules())
 print(model)
+exit("EXIT")
+# print(model)
 if args.cuda:
 	print("Loading model on GPU")
 	model.cuda()
@@ -102,9 +109,10 @@ def train(epoch, optimizer):
 			print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
 				epoch, batch_idx * len(data), len(train_loader.dataset),
 				perc, loss.data[0]))
-			#i+=1
-			#if i == 1:
-			#	return
+			# i+=1
+			# if i == 1:
+			# 	return
+		return
 
 def test():
 	model.eval()
@@ -129,6 +137,11 @@ def test():
 	return correct / len(test_loader.dataset)
 
 
+def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
+    torch.save(state, filename)
+    if is_best:
+        shutil.copyfile(filename, 'model_best.pth.tar')
+
 new_lr = 0.001
 Lr.append(new_lr)
 for epoch in range(1, args.epochs + 1):
@@ -136,9 +149,10 @@ for epoch in range(1, args.epochs + 1):
 	optimizer = optim.Adam(model.parameters(), lr=new_lr)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
 	############
 	train(epoch, optimizer)
-	perf = test()
+	# perf = test()
+	perf = 0
 	############
-	new_lr = 0.001 / (1 + epoch)
+	new_lr = 0.001 / (1 + 10*epoch)
 	Lr.append(new_lr)
 	############
 	torch.save(
@@ -146,7 +160,24 @@ for epoch in range(1, args.epochs + 1):
 		 'test': perf},
 		"model.pth"
 	)
-	# break
+	save_checkpoint({
+            'epoch': epoch + 1,
+            'arch': 'test_',#args.arch,
+            'state_dict': model.state_dict(),
+            'best_prec1': 'test_',
+            'optimizer' : optimizer.state_dict(),
+            # 'params' : model.parameters(),
+            'model' : model
+        }, 0)
+	if epoch == args.epochs:
+		print("saving model")
+		torch.save(
+			{'net': model,
+		 	'test': perf},
+			"/output/model.pth"
+		)
+		
+	break
 
 def new_lr1(lr0, epoch, decay_rate):
 	return lr0 / (1 + decay_rate * (epoch - 1))
@@ -157,14 +188,14 @@ def new_lr2(lr0, epoch, decay_rate):
 # print([l for l in Losses])
 # print([a for a in Absc])
 # Absc = [a * 10 for a in Absc]
-plt.figure(1)
-plt.figure(figsize=(100, 5))
-plt.plot(Absc, Losses, 'ro')
-plt.axis([0, args.epochs + 1, 0, int(max(Losses) + 0.1 * max(Losses) + 1)])
-plt.savefig('/output/loss.png', bbox_inches='tight')
+# plt.figure(1)
+# plt.figure(figsize=(100, 5))
+# plt.plot(Absc, Losses, 'ro')
+# plt.axis([0, args.epochs + 1, 0, int(max(Losses) + 0.1 * max(Losses) + 1)])
+# plt.savefig('/output/loss.png', bbox_inches='tight')
 
-plt.figure(2)
-plt.figure(figsize=(100, 5))
-plt.plot(Lr, 'bs')
-plt.savefig('/output/lr.png', bbox_inches='tight')
+# plt.figure(2)
+# plt.figure(figsize=(100, 5))
+# plt.plot(Lr, 'bs')
+# plt.savefig('/output/lr.png', bbox_inches='tight')
 

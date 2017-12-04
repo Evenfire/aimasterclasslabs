@@ -57,5 +57,3 @@ if __name__ == '__main__':
 	    print(d)
 	    print(type(d['losses'][0][0]))
 
-
-#class hp picker

@@ -211,7 +211,7 @@ def load_set(args):
 							transforms.ToPILImage()
 						]))
 	else:
-		loaded_set = datasets.AgirEcole('agirecole', 'val', train=False,
+		loaded_set = datasets.AgirEcole('agirecole', 'train', train=False,#val
 						transform=transforms.Compose([
 							transforms.ToTensor(),
 							transforms.ToPILImage()
