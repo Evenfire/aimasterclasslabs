@@ -205,13 +205,13 @@ def img_to_tensor(img):
 def load_set(args):
 	print("Loading dataset {} {}".format(args.set, args.type))
 	if args.set == 'train':
-		loaded_set = datasets.EMNIST('data', args.type, train=True, download=True,
+		loaded_set = datasets.EMNIST('data/EMNIST', args.type, train=True, download=True,
 						transform=transforms.Compose([
 							transforms.ToTensor(),
 							transforms.ToPILImage()
 						]))
 	else:
-		loaded_set = datasets.AgirEcole('agirecole', 'train', train=False,#val
+		loaded_set = datasets.AgirEcole('data/agir', 'train', train=False,#val
 						transform=transforms.Compose([
 							transforms.ToTensor(),
 							transforms.ToPILImage()
@@ -224,10 +224,10 @@ def save_pt(tensors, labels, args):
 		print("No save - PT")
 		return
 	if args.set == 'train':
-		root = 'data'
+		root = 'data/EMNIST'
 		file_name = 'training_letters.pt'
 	else:
-		root = 'agirecole'
+		root = 'data/agir'
 		file_name = 'data-val.pt'
 	print("Save - PT to {}".format(os.path.join(root, 'processed', file_name)))
 	with open(os.path.join(root, 'processed', file_name), 'wb') as f:
