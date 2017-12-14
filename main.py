@@ -63,14 +63,9 @@ test_loader = torch.utils.data.DataLoader(
 	batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
 #load model
-# model = models.Net()
-# model = torch.load("model_36.pth", map_location=lambda storage, loc: storage)
-model = torch.load("checkpoint.pth")
-# print(param.requires_grad for param in model.parameters())
-# print(model.modules())
+model = models.Net()
 print(model)
-exit("EXIT")
-# print(model)
+
 if args.cuda:
 	print("Loading model on GPU")
 	model.cuda()
@@ -84,13 +79,10 @@ Losses = []
 Absc = []
 Lr = []
 Lr_absc = []
-def train(epoch, optimizer):
+def train(epoch, optimizer, scheduler):
 	model.train()
 	i = 0
-	#new_lr = 0.001
-	#Lr.append(new_lr)
 	for batch_idx, (data, target) in enumerate(train_loader):
-		#optimizer = optim.Adam(model.parameters(), lr=new_lr)
 		if args.cuda:
 			data, target = data.cuda(), target.cuda()
 		data, target = Variable(data), Variable(target)
@@ -100,19 +92,14 @@ def train(epoch, optimizer):
 		loss = model.ceriation(output, target)
 		loss.backward()
 		optimizer.step()
-		#new_lr = 0.001 / math.sqrt((batch_idx + 10*epoch)/10)
-		#Lr.append(new_lr)
 		if batch_idx % args.log_interval == 0:
+			scheduler.step(loss.data[0])
 			perc = 100. * batch_idx / len(train_loader)
 			Losses.append(loss.data[0])
 			Absc.append(epoch + perc / 10)
 			print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
 				epoch, batch_idx * len(data), len(train_loader.dataset),
 				perc, loss.data[0]))
-			# i+=1
-			# if i == 1:
-			# 	return
-		return
 
 def test():
 	model.eval()
@@ -128,56 +115,50 @@ def test():
 		# test_loss += F.nll_loss(output, target, size_average=False).data[0] # sum up batch loss
 		pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
 		correct += pred.eq(target.data.view_as(pred)).cpu().sum()
-
 	test_loss /= len(test_loader.dataset)
 	print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
 		test_loss, correct, len(test_loader.dataset),
 		100. * correct / len(test_loader.dataset)))
-
 	return correct / len(test_loader.dataset)
 
 
 def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
-    torch.save(state, filename)
-    if is_best:
-        shutil.copyfile(filename, 'model_best.pth.tar')
+	torch.save(state, filename)
+	if is_best:
+		shutil.copyfile(filename, 'model_best.pth.tar')
 
 new_lr = 0.001
 Lr.append(new_lr)
+# best_perf = 0.0
+optimizer = optim.Adam(model.parameters(), lr=new_lr)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
+scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
 for epoch in range(1, args.epochs + 1):
+	train(epoch, optimizer, scheduler)
+	perf = test()
+	# new_lr = 0.001 / (1 + 10*epoch)
+	# Lr.append(new_lr)
 	############
-	optimizer = optim.Adam(model.parameters(), lr=new_lr)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
-	############
-	train(epoch, optimizer)
-	# perf = test()
-	perf = 0
-	############
-	new_lr = 0.001 / (1 + 10*epoch)
-	Lr.append(new_lr)
-	############
-	torch.save(
-		{'net': model,
-		 'test': perf},
-		"model.pth"
-	)
-	save_checkpoint({
-            'epoch': epoch + 1,
-            'arch': 'test_',#args.arch,
-            'state_dict': model.state_dict(),
-            'best_prec1': 'test_',
-            'optimizer' : optimizer.state_dict(),
-            # 'params' : model.parameters(),
-            'model' : model
-        }, 0)
+	# torch.save(
+	# 	{'net': model,
+	# 	 'test': perf},
+	# 	"model.pth"
+	# )
+	# save_checkpoint({
+		# 	'epoch': epoch + 1,
+		# 	'arch': 'test_',#args.arch,
+		# 	'state_dict': model.state_dict(),
+		# 	'best_prec1': 'test_',
+		# 	'optimizer' : optimizer.state_dict(),
+		# 	# 'params' : model.parameters(),
+		# 	'model' : model
+		# }, 0)
 	if epoch == args.epochs:
 		print("saving model")
 		torch.save(
 			{'net': model,
-		 	'test': perf},
+			'test': perf},
 			"/output/model.pth"
 		)
-		
-	break
 
 def new_lr1(lr0, epoch, decay_rate):
 	return lr0 / (1 + decay_rate * (epoch - 1))
