@@ -19,21 +19,12 @@ args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
 kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
-# test_loader = torch.utils.data.DataLoader(
-    # datasets.AgirEcole(args.root, args.split, train=False, transform=transforms.Compose([
-    #                     transforms.ToTensor(),
-    #                     transforms.Normalize((0.1722,), (0.3309,))
-    #                 ])),
-    # batch_size=args.test_batch_size, shuffle=True, **kwargs)
-
-
 test_loader = torch.utils.data.DataLoader(
-    datasets.AgirEcole('data/agir', 'dev', train=False,
-                    transform=transforms.Compose([
+    datasets.AgirEcole(args.root, args.split, train=False, transform=transforms.Compose([
                         transforms.ToTensor(),
                         transforms.Normalize((0.1722,), (0.3309,))
                     ])),
-    batch_size=4, shuffle=True)
+    batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
 predictor = Predictor()
 test_loss = 0
