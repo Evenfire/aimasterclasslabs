@@ -1,5 +1,6 @@
 from __future__ import print_function
 from sys import exit
+import time
 import math
 import argparse
 import torch
@@ -15,34 +16,41 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 
 # Training settings
-def ft_parse_args():
-	parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
-	parser.add_argument('--batch-size', type=int, default=64, metavar='N',
-						help='input batch size for training (default: 64)')
-	parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
-						help='input batch size for testing (default: 1000)')
-	parser.add_argument('--epochs', type=int, default=10, metavar='N',
-						help='number of epochs to train (default: 10)')
-	parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
-						help='learning rate (default: 0.01)')
-	parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
-						help='SGD momentum (default: 0.5)')
-	parser.add_argument('--no-cuda', action='store_true', default=False,
-						help='disables CUDA training')
-	parser.add_argument('--seed', type=int, default=1, metavar='S',
-						help='random seed (default: 1)')
-	parser.add_argument('--log-interval', type=int, default=10, metavar='N',
-						help='how many batches to wait before logging training status')
-	parser.add_argument('--data-path', type=str, default='data/EMNIST', metavar='DPATH',
-						help='dataset path (e.g. use to load dataset on Floydhub)')
-	parser.add_argument('--data-transfer', type=str, default='data/agir', metavar='DPATH',
-						help='dataset path (e.g. use to load dataset on Floydhub)')
-	parser.add_argument('--server', action='store_true', default=False,
-						help='specify if program is on Floydhub')
-	args = parser.parse_args()
-	return args
+parser = argparse.ArgumentParser(description='PyTorch MNIST Example')
+parser.add_argument('--batch-size', type=int, default=64, metavar='N',
+					help='input batch size for training (default: 64)')
+parser.add_argument('--test-batch-size', type=int, default=1000, metavar='N',
+					help='input batch size for testing (default: 1000)')
+parser.add_argument('--epochs', type=int, default=10, metavar='N',
+					help='number of epochs to train (default: 10)')
+parser.add_argument('--lr', type=float, default=0.01, metavar='LR',
+					help='learning rate (default: 0.01)')
+parser.add_argument('--momentum', type=float, default=0.5, metavar='M',
+					help='SGD momentum (default: 0.5)')
+parser.add_argument('--no-cuda', action='store_true', default=False,
+					help='disables CUDA training')
+parser.add_argument('--seed', type=int, default=1, metavar='S',
+					help='random seed (default: 1)')
+parser.add_argument('--log-interval', type=int, default=10, metavar='N',
+					help='how many batches to wait before logging training status')
+parser.add_argument('--data-path', type=str, default='data/EMNIST', metavar='DPATH',
+					help='dataset path (e.g. use to load dataset on Floydhub)')
+parser.add_argument('--data-transfer', type=str, default='data/agir', metavar='DPATH',
+					help='dataset path (e.g. use to load dataset on Floydhub)')
+parser.add_argument('--server', action='store_true', default=False,
+					help='specify if program is on Floydhub')
+parser.add_argument('--short', action='store_true', default=False,
+					help='shorten')
+args = parser.parse_args()
 
-def load_data(args):
+#set Cuda
+args.cuda = not args.no_cuda and torch.cuda.is_available()
+print("Cuda on: {}".format(args.cuda))
+torch.manual_seed(args.seed)
+if args.cuda:
+	torch.cuda.manual_seed(args.seed)
+
+def load_data():
 	print("Loading data...")
 	PIL_imgs = []
 	kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
@@ -63,7 +71,7 @@ def load_data(args):
 		datasets.AgirEcole(args.data_transfer, 'train', train=True, download=False,
 						transform=transforms.Compose([
 							transforms.ToTensor(),
-							transforms.Normalize((0.1722,), (0.3309,))
+							transforms.Normalize((0.1722,), (0.3309,))#CHECK
 						])),
 		batch_size=1, shuffle=True)
 	test_transfer_loader = torch.utils.data.DataLoader(
@@ -76,15 +84,13 @@ def load_data(args):
 	print("Done")
 	return train_loader, test_loader, train_transfer_loader, test_transfer_loader
 
-def load_model(args):
-	model = models.Net()
-	print(model)
+model = models.Net()
+print(model)
 
-	if args.cuda:
-		print("Loading model on GPU")
-		model.cuda()
-		print("Done")
-	return model
+if args.cuda:
+	print("Preparing model for GPU")#loading model on GPU
+	model.cuda()
+	print("Done")
 
 # optimizer = optim.SGD(model.parameters(), lr=args.lr, momentum=args.momentum)
 # optimizer = optim.Adam(model.parameters(), lr=0.001)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
@@ -116,12 +122,15 @@ def train(epoch, optimizer, scheduler, train_set, useSchedule):
 			print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
 				epoch, batch_idx * len(data), len(train_set.dataset),
 				perc, loss.data[0]))
+			if args.short and batch_idx == args.log_interval * 3:
+				return
 
 def test(test_set):
 	model.eval()
 	model.set_sa(False)
 	test_loss = 0
 	correct = 0
+	print("Testing...")#progress bar
 	for data, target in test_set:
 		if args.cuda:
 			data, target = data.cuda(), target.cuda()
@@ -131,37 +140,13 @@ def test(test_set):
 		# test_loss += F.nll_loss(output, target, size_average=False).data[0] # sum up batch loss
 		pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
 		correct += pred.eq(target.data.view_as(pred)).cpu().sum()
+		if args.short:
+				return
 	test_loss /= len(test_set.dataset)
 	print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
-		test_loss, correct, len(test_set.dataset),
-		100. * correct / len(test_set.dataset)))
+			test_loss, correct, len(test_set.dataset),
+			100. * correct / len(test_set.dataset)))
 	return correct / len(test_set.dataset)
-
-
-def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
-	torch.save(state, filename)
-	if is_best:
-		shutil.copyfile(filename, 'model_best.pth.tar')
-
-# new_lr = 0.001
-# Lr.append(new_lr)
-# # best_perf = 0.0
-# optimizer = optim.Adam(model.parameters(), lr=new_lr)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
-# #PHASE2 changes: datasets, optimizer paramters, requires_grad (no scheduler)
-# scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
-# for epoch in range(1, args.epochs + 1):
-# 	train(epoch, optimizer, scheduler, train_loader, True)
-# 	perf = test(test_loader)
-# 	# new_lr = 0.001 / (1 + 10*epoch)
-# 	# Lr.append(new_lr)
-# 	if epoch == args.epochs:
-# 		print("saving model")
-# 		torch.save(model, "/output/model.pth")
-# 		# torch.save(
-# 		# 	{'net': model,
-# 		# 	'test': perf},
-# 		# 	"/output/model.pth"
-# 		# )
 
 # print([l for l in Losses])
 # print([a for a in Absc])
@@ -177,23 +162,35 @@ def save_checkpoint(state, is_best, filename='checkpoint.pth.tar'):
 # plt.plot(Lr, 'bs')
 # plt.savefig('/output/lr.png', bbox_inches='tight')
 
+def get_time():
+	return time.strftime("%d-%m-%Y_%H:%M:%S_%Z")
+
+
 #PHASE2 changes: datasets, optimizer paramters, requires_grad (no scheduler)
-def phase1(model, train_set, test_set):
+def phase1(train_set, test_set, agir_test):
+	print("PHASE 1")
 	new_lr = 0.001
 	# Lr.append(new_lr)
 	# best_perf = 0.0
 	optimizer = optim.Adam(model.parameters(), lr=new_lr)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
-	scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+	# scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
 	for epoch in range(1, args.epochs + 1):
-		train(epoch, optimizer, scheduler, train_set, True)
-		perf = test(test_set)
+		train(epoch, optimizer, None, train_set, False)
+		# train(epoch, optimizer, scheduler, train_set, True)
+		perf_emnist = test(test_set)
+		perf_agir = test(agir_test)
 		# new_lr = 0.001 / (1 + 10*epoch)
 		# Lr.append(new_lr)
 		if epoch == args.epochs:
-			print("saving model")
-			torch.save(model, "/output/model.pth")
+			print("Saving model")
+			# torch.save(model, "/output/model.pth")
+			prefix = "/output/" if args.server else ""
+			torch.save({'net' : model, 'perf' : (perf_emnist, perf_agir)}, "{}model_emnist_{}.pth".format(prefix, get_time()))
+			print("Done")
+	return model
 
-def phase2(model, train_set, test_set):
+def phase2(train_set, test_set):
+	print("PHASE 2")
 	new_lr = 0.001
 	# Lr.append(new_lr)
 	# best_perf = 0.0
@@ -213,10 +210,13 @@ def phase2(model, train_set, test_set):
 	# scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
 	for epoch in range(1, 5 + 1):
 		train(epoch, optimizer, None, train_set, False)
-		perf = test(test_set)
+		perf_agir = test(test_set)
 		if epoch == args.epochs:
-			print("saving model")
-			torch.save(model, "/output/model.pth")
+			print("Saving model")
+			prefix = "/output/" if args.server else ""
+			torch.save({'net' : model, 'perf' : (None, perf_agir)}, "{}model_agir_{}.pth".format(prefix, get_time()))
+			print("Done")
+	return model
 
 
 def new_lr1(lr0, epoch, decay_rate):
@@ -225,16 +225,8 @@ def new_lr1(lr0, epoch, decay_rate):
 def new_lr2(lr0, epoch, decay_rate):
 	return (0.95**(epoch - 1)) * lr0
 
-if __name__ == '__main__':
-	args = ft_parse_args()
+#break function or use globals for model, etc.
 
-	args.cuda = not args.no_cuda and torch.cuda.is_available()
-	print("Cuda on: {}".format(args.cuda))
-	torch.manual_seed(args.seed)
-	if args.cuda:
-		torch.cuda.manual_seed(args.seed)
-
-	p1_train, p1_test, p2_train, p2_test = load_data(args)
-	model = load_model(args)
-	# phase1(model, p1_train, p1_test)
-	phase2(model, p2_train, p2_test)
+p1_train, p1_test, p2_train, p2_test = load_data()
+phase1(p1_train, p1_test, p2_test)
+phase2(p2_train, p2_test)
