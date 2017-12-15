@@ -55,7 +55,7 @@ def load_data():
 	PIL_imgs = []
 	kwargs = {'num_workers': 1, 'pin_memory': True} if args.cuda else {}
 	train_loader = torch.utils.data.DataLoader(
-		datasets.EMNIST(args.data_path, 'letters', train=True, download=True,
+		datasets.EMNIST(args.data_path, 'letters', train=True, download=False,
 						transform=transforms.Compose([
 							transforms.ToTensor(),
 							transforms.Normalize((0.1722,), (0.3309,))#CHECK
@@ -73,14 +73,14 @@ def load_data():
 							transforms.ToTensor(),
 							transforms.Normalize((0.1722,), (0.3309,))#CHECK
 						])),
-		batch_size=1, shuffle=True)
+		batch_size=4, shuffle=True)
 	test_transfer_loader = torch.utils.data.DataLoader(
 		datasets.AgirEcole(args.data_transfer, 'test', train=False,
 						transform=transforms.Compose([
 							transforms.ToTensor(),
 							transforms.Normalize((0.1722,), (0.3309,))
 						])),
-		batch_size=1, shuffle=True)
+		batch_size=4, shuffle=True)
 	print("Done")
 	return train_loader, test_loader, train_transfer_loader, test_transfer_loader
 
@@ -96,12 +96,13 @@ if args.cuda:
 # optimizer = optim.Adam(model.parameters(), lr=0.001)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
 
 # def train(epoch, optimizer):
-# Losses = []
-# Absc = []
-# Lr = []
-# Lr_absc = []
+Losses = []
+Absc = []
+Lr = []
+Lr_absc = []
 def train(epoch, optimizer, scheduler, train_set, useSchedule):
 	model.train()
+	model.set_sa(True)
 	i = 0
 	for batch_idx, (data, target) in enumerate(train_set):
 		if args.cuda:
@@ -114,23 +115,23 @@ def train(epoch, optimizer, scheduler, train_set, useSchedule):
 		loss.backward()
 		optimizer.step()
 		if batch_idx % args.log_interval == 0:
-			if useSchedule:
-				scheduler.step(loss.data[0])
+			# if useSchedule:
+			# 	scheduler.step(loss.data[0])
 			perc = 100. * batch_idx / len(train_set)
-			# Losses.append(loss.data[0])
-			# Absc.append(epoch + perc / 10)
+			Losses.append(loss.data[0])
+			Absc.append(epoch + perc / 10)
 			print('Train Epoch: {} [{}/{} ({:.0f}%)]\tLoss: {:.6f}'.format(
 				epoch, batch_idx * len(data), len(train_set.dataset),
 				perc, loss.data[0]))
 			if args.short and batch_idx == args.log_interval * 3:
 				return
 
-def test(test_set):
+def test(test_set, set_name):
 	model.eval()
 	model.set_sa(False)
 	test_loss = 0
 	correct = 0
-	print("Testing...")#progress bar
+	print("\nTesting on {}...".format(set_name))#progress bar
 	for data, target in test_set:
 		if args.cuda:
 			data, target = data.cuda(), target.cuda()
@@ -141,57 +142,62 @@ def test(test_set):
 		pred = output.data.max(1, keepdim=True)[1] # get the index of the max log-probability
 		correct += pred.eq(target.data.view_as(pred)).cpu().sum()
 		if args.short:
-				return
+				break
 	test_loss /= len(test_set.dataset)
-	print('\nTest set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
+	print('Test set: Average loss: {:.4f}, Accuracy: {}/{} ({:.0f}%)\n'.format(
 			test_loss, correct, len(test_set.dataset),
 			100. * correct / len(test_set.dataset)))
-	return correct / len(test_set.dataset)
+	return float(correct) / len(test_set.dataset)
 
 # print([l for l in Losses])
 # print([a for a in Absc])
 # Absc = [a * 10 for a in Absc]
-# plt.figure(1)
-# plt.figure(figsize=(100, 5))
-# plt.plot(Absc, Losses, 'ro')
-# plt.axis([0, args.epochs + 1, 0, int(max(Losses) + 0.1 * max(Losses) + 1)])
-# plt.savefig('/output/loss.png', bbox_inches='tight')
+def plot():
+	prefix = '/output/' if args.server else ""
+	
+	plt.figure(1)
+	plt.figure(figsize=(100, 5))
+	plt.plot(Absc, Losses, 'ro')
+	plt.axis([0, args.epochs + 1, 0, int(max(Losses) + 0.1 * max(Losses) + 1)])
+	plt.savefig('{}loss.png'.format(prefix), bbox_inches='tight')
 
-# plt.figure(2)
-# plt.figure(figsize=(100, 5))
-# plt.plot(Lr, 'bs')
-# plt.savefig('/output/lr.png', bbox_inches='tight')
+	plt.figure(2)
+	plt.figure(figsize=(100, 5))
+	plt.plot(Lr, 'bs')
+	plt.savefig('{}lr.png'.format(prefix), bbox_inches='tight')
 
 def get_time():
 	return time.strftime("%d-%m-%Y_%H:%M:%S_%Z")
 
 
-#PHASE2 changes: datasets, optimizer paramters, requires_grad (no scheduler)
 def phase1(train_set, test_set, agir_test):
-	print("PHASE 1")
+	print("\nPHASE 1")
 	new_lr = 0.001
 	# Lr.append(new_lr)
 	# best_perf = 0.0
 	optimizer = optim.Adam(model.parameters(), lr=new_lr)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
 	# scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
+	scheduler = optim.lr_scheduler.ExponentialLR(optimizer, 0.7, last_epoch=-1)
 	for epoch in range(1, args.epochs + 1):
-		train(epoch, optimizer, None, train_set, False)
-		# train(epoch, optimizer, scheduler, train_set, True)
-		perf_emnist = test(test_set)
-		perf_agir = test(agir_test)
+		train(epoch, optimizer, scheduler, train_set, True)
+		perf_emnist = test(test_set, 'emnist')
+		perf_agir = test(agir_test, 'agir')
 		# new_lr = 0.001 / (1 + 10*epoch)
-		# Lr.append(new_lr)
+		# Lr.append(optimizer.state_dict())
+		#graph
+		Lr.append(optimizer.param_groups[0]['lr'])
+		scheduler.step()
 		if epoch == args.epochs:
 			print("Saving model")
-			# torch.save(model, "/output/model.pth")
 			prefix = "/output/" if args.server else ""
 			torch.save({'net' : model, 'perf' : (perf_emnist, perf_agir)}, "{}model_emnist_{}.pth".format(prefix, get_time()))
 			print("Done")
-	return model
+	return Lr[-1]
 
-def phase2(train_set, test_set):
-	print("PHASE 2")
-	new_lr = 0.001
+#PHASE2 changes: datasets, optimizer paramters, requires_grad (no scheduler), no dropout
+def phase2(train_set, test_set, lr):
+	print("\nPHASE 2")
+	new_lr = lr
 	# Lr.append(new_lr)
 	# best_perf = 0.0
 
@@ -208,15 +214,17 @@ def phase2(train_set, test_set):
 					{'params': model.layer3_1.parameters()}
 							], lr=new_lr)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
 	# scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
-	for epoch in range(1, 5 + 1):
+	max_epoch = 10
+	for epoch in range(1, max_epoch + 1):
 		train(epoch, optimizer, None, train_set, False)
-		perf_agir = test(test_set)
-		if epoch == args.epochs:
+		perf_agir = test(test_set, 'agir')
+		#graph
+		Lr.append(optimizer.param_groups[0]['lr'])
+		if epoch == max_epoch:
 			print("Saving model")
 			prefix = "/output/" if args.server else ""
 			torch.save({'net' : model, 'perf' : (None, perf_agir)}, "{}model_agir_{}.pth".format(prefix, get_time()))
 			print("Done")
-	return model
 
 
 def new_lr1(lr0, epoch, decay_rate):
@@ -228,5 +236,6 @@ def new_lr2(lr0, epoch, decay_rate):
 #break function or use globals for model, etc.
 
 p1_train, p1_test, p2_train, p2_test = load_data()
-phase1(p1_train, p1_test, p2_test)
-phase2(p2_train, p2_test)
+lr = phase1(p1_train, p1_test, p2_test)
+phase2(p2_train, p2_test, lr)
+plot()

@@ -51,8 +51,8 @@ class Net(nn.Module):
 	def __init__(self, init_values=[.3, .3]):
 		super(Net, self).__init__()
 		self.sa = True
-		self.l3d = 0.4
-		self.l31d = 0.4
+		self.l3d = 0#0.4
+		self.l31d = 0#0.4
 		self.layer1 = nn.Sequential(
 			nn.Conv2d(1, 32, kernel_size=(5, 5), stride=1, padding=2),
 			# nn.BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True)
