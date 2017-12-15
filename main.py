@@ -75,7 +75,7 @@ def load_data():
 						])),
 		batch_size=4, shuffle=True)
 	test_transfer_loader = torch.utils.data.DataLoader(
-		datasets.AgirEcole(args.data_transfer, 'test', train=False,
+		datasets.AgirEcole(args.data_transfer, 'dev', train=False,
 						transform=transforms.Compose([
 							transforms.ToTensor(),
 							transforms.Normalize((0.1722,), (0.3309,))
@@ -194,7 +194,7 @@ def phase1(train_set, test_set, agir_test):
 			print("Done")
 	return Lr[-1]
 
-#PHASE2 changes: datasets, optimizer paramters, requires_grad (no scheduler), no dropout
+#PHASE2 changes: datasets, optimizer paramters, requires_grad (no scheduler)
 def phase2(train_set, test_set, lr):
 	print("\nPHASE 2")
 	new_lr = lr
@@ -207,7 +207,7 @@ def phase2(train_set, test_set, lr):
 		p.requires_grad = True
 	for p in model.layer3_1.parameters():
 		p.requires_grad = True
-	model.l3d = 0
+	# model.l3d = 0
 
 	optimizer = optim.Adam([
 					{'params': model.layer3.parameters()},

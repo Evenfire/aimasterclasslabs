@@ -55,20 +55,22 @@ class Net(nn.Module):
 		self.l31d = 0#0.4
 		self.layer1 = nn.Sequential(
 			nn.Conv2d(1, 32, kernel_size=(5, 5), stride=1, padding=2),
-			# nn.BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True)
 			nn.ReLU(),
+			nn.BatchNorm2d(32, eps=1e-05, momentum=0.1, affine=True),
 			nn.MaxPool2d((2,2), stride=2, padding=0)
 			)
 		self.layer2 = nn.Sequential(
 			nn.Conv2d(32, 64, kernel_size=(5, 5), stride=1, padding=2),
 			nn.ReLU(),
+			nn.BatchNorm2d(64, eps=1e-05, momentum=0.1, affine=True),
 			nn.MaxPool2d((2,2), stride=2, padding=0)
 			)
 		#+conv?
 		self.layer3 = nn.Sequential(
-			nn.Linear(7*7*64, 2048),#(7*7?)
-			nn.ReLU(),
-			nn.Dropout(p=self.l3d)
+			nn.Linear(7*7*64, 2048),
+			nn.ReLU()
+			# nn.BatchNorm1d(2048, eps=1e-05, momentum=0.1, affine=True)
+			# nn.Dropout(p=self.l3d)
 			)
 		self.layer3_1 = nn.Sequential(
 			nn.Linear(2048, 27),
