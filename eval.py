@@ -15,6 +15,8 @@ parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='disables CUDA training')
 parser.add_argument("--split", default='val')
 parser.add_argument("--root", default='agirecole')
+parser.add_argument('--filename', type=str, default='model.pth',
+                    help='model to be tested')
 args = parser.parse_args()
 args.cuda = not args.no_cuda and torch.cuda.is_available()
 
@@ -26,7 +28,7 @@ test_loader = torch.utils.data.DataLoader(
                     ])),
     batch_size=args.test_batch_size, shuffle=True, **kwargs)
 
-predictor = Predictor()
+predictor = Predictor(filename=args.filename)
 test_loss = 0
 correct = 0
 for data, target in test_loader:

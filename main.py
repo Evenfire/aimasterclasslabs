@@ -223,11 +223,11 @@ def phase2(train_set, test_set, lr):
 		perf_agir = test(test_set, 'agir')
 		#graph
 		Lr.append(optimizer.param_groups[0]['lr'])
-		if epoch == max_epoch:
-			print("Saving model")
-			prefix = "/output/" if args.server else ""
-			torch.save({'net' : model, 'perf' : (None, perf_agir)}, "{}model_agir_{}.pth".format(prefix, get_time()))
-			print("Done")
+		# if epoch == max_epoch:
+		print("Saving model")
+		prefix = "/output/" if args.server else ""
+		torch.save({'net' : model, 'perf' : (None, perf_agir)}, "{}model_agir_{}_epoch{}.pth".format(prefix, get_time(), epoch))
+		print("Done")
 
 
 def new_lr1(lr0, epoch, decay_rate):
