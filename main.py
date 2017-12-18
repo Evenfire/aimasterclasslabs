@@ -207,11 +207,14 @@ def phase2(train_set, test_set, lr):
 		p.requires_grad = True
 	for p in model.layer3_1.parameters():
 		p.requires_grad = True
+	for p in model.layer3_2.parameters():#
+		p.requires_grad = True#
 	# model.l3d = 0
 
 	optimizer = optim.Adam([
 					{'params': model.layer3.parameters()},
-					{'params': model.layer3_1.parameters()}
+					{'params': model.layer3_1.parameters()},
+					{'params': model.layer3_2.parameters()}
 							], lr=new_lr)#, betas=(0.9, 0.999), eps=1e-08, weight_decay=0.001)
 	# scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, 'min')
 	max_epoch = 10
